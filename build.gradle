@@ -1,0 +1,10 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'com.github.dedinc'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
