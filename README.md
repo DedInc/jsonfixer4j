@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     // ...
-    implementation "com.github.dedinc:jsonfixer4j:1.0"
+    implementation 'com.github.DedInc:jsonfixer4j:b7a6d1109c'
 }
 ```
 
