@@ -3,7 +3,7 @@ package com.github.dedinc.jsonfixer4j;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-public class JSONAutoCorrector {
+public final class JSONAutoCorrector {
 
     private final JSONTokenizer tokenizer;
     private final JSONParser parser;
@@ -26,5 +26,3 @@ public class JSONAutoCorrector {
         return serializer.serialize(result);
     }
 }
-
-

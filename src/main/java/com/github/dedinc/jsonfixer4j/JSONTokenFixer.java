@@ -1,56 +1,54 @@
 package com.github.dedinc.jsonfixer4j;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 
-class JSONTokenFixer {
+public final class JSONTokenFixer {
 
     public static List<Token> fixTokens(List<Token> tokens) {
-        List<Token> fixed = new ArrayList<>();
-        Deque<TokenKind> stack = new ArrayDeque<>();
-        Map<TokenKind, TokenKind> matching = new HashMap<>();
-        matching.put(TokenKind.LBRACE, TokenKind.RBRACE);
-        matching.put(TokenKind.LBRACKET, TokenKind.RBRACKET);
-
+        List<Token> fixed = new ArrayList<>(tokens.size());
+        Deque<TokenKind> stack = new ArrayDeque<>(tokens.size());
         for (Token token : tokens) {
-            if (token.kind == TokenKind.LBRACE || token.kind == TokenKind.LBRACKET) {
-                fixed.add(token);
-                stack.push(matching.get(token.kind));
-            } else if (token.kind == TokenKind.RBRACE || token.kind == TokenKind.RBRACKET) {
-                if (!stack.isEmpty()) {
-                    TokenKind expected = stack.peek();
-                    if (token.kind == expected) {
+            switch (token.kind) {
+                case LBRACE:
+                case LBRACKET:
+                    fixed.add(token);
+                    stack.push(token.kind == TokenKind.LBRACE ? TokenKind.RBRACE : TokenKind.RBRACKET);
+                    break;
+                case RBRACE:
+                case RBRACKET:
+                    if (!stack.isEmpty() && token.kind == stack.peek()) {
                         stack.pop();
                         fixed.add(token);
                     } else {
-
-                        if (expected == TokenKind.RBRACKET) {
-                            fixed.add(new Token(TokenKind.RBRACKET, "]"));
+                        TokenKind expectedToken = stack.isEmpty() ? null : stack.peek();
+                        fixed.add(createMatchingToken(expectedToken, token));
+                        if (!stack.isEmpty() && token.kind == stack.peek()) {
                             stack.pop();
-                            if (!stack.isEmpty() && token.kind == stack.peek()) {
-                                stack.pop();
-                                fixed.add(token);
-                            } else {
-                                fixed.add(token);
-                            }
-                        } else {
                             fixed.add(token);
                         }
                     }
-                } else {
+                    break;
+                default:
                     fixed.add(token);
-                }
-            } else {
-                fixed.add(token);
+                    break;
             }
         }
         while (!stack.isEmpty()) {
-            TokenKind exp = stack.pop();
-            if (exp == TokenKind.RBRACE) {
-                fixed.add(new Token(TokenKind.RBRACE, "}"));
-            } else if (exp == TokenKind.RBRACKET) {
-                fixed.add(new Token(TokenKind.RBRACKET, "]"));
-            }
+            TokenKind expectedToken = stack.pop();
+            fixed.add(createMatchingToken(expectedToken, null));
         }
         return fixed;
+    }
+
+    private static Token createMatchingToken(TokenKind expectedToken, Token originalToken) {
+        if (expectedToken == TokenKind.RBRACE) {
+            return new Token(TokenKind.RBRACE, "}");
+        } else if (expectedToken == TokenKind.RBRACKET) {
+            return new Token(TokenKind.RBRACKET, "]");
+        }
+        return originalToken;
     }
 }

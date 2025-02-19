@@ -5,12 +5,16 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-class JSONTokenizer {
+public final class JSONTokenizer {
+
+    private static final Pattern NUM_PATTERN = Pattern.compile("^-?\\d+(\\.\\d+)?$");
+    private static final Pattern ID_PATTERN = Pattern.compile("^[A-Za-z_]\\w*$");
 
     public List<Token> tokenize(String s) {
-        List<Token> tokens = new ArrayList<>();
+
+        List<Token> tokens = new ArrayList<>(s.length() / 2);
         int i = 0;
-        int length = s.length();
+        final int length = s.length();
         while (i < length) {
             char c = s.charAt(i);
             if (Character.isWhitespace(c)) {
@@ -21,33 +25,36 @@ class JSONTokenizer {
                 case '{':
                     tokens.add(new Token(TokenKind.LBRACE, "{"));
                     i++;
-                    continue;
+                    break;
                 case '}':
                     tokens.add(new Token(TokenKind.RBRACE, "}"));
                     i++;
-                    continue;
+                    break;
                 case '[':
                     tokens.add(new Token(TokenKind.LBRACKET, "["));
                     i++;
-                    continue;
+                    break;
                 case ']':
                     tokens.add(new Token(TokenKind.RBRACKET, "]"));
                     i++;
-                    continue;
+                    break;
                 case ':':
                     tokens.add(new Token(TokenKind.COLON, ":"));
                     i++;
-                    continue;
+                    break;
                 case ',':
                     tokens.add(new Token(TokenKind.COMMA, ","));
                     i++;
-                    continue;
-                case '"':
+                    break;
+                case '"': {
                     i++;
                     StringBuilder sb = new StringBuilder();
                     while (i < length) {
                         char current = s.charAt(i);
-                        if (current == '\\') {
+                        if (current == '"') {
+                            i++;
+                            break;
+                        } else if (current == '\\') {
                             if (i + 1 < length) {
                                 sb.append(current);
                                 sb.append(s.charAt(i + 1));
@@ -56,63 +63,80 @@ class JSONTokenizer {
                                 i++;
                                 break;
                             }
-                        } else if (current == '"') {
-                            break;
                         } else {
                             sb.append(current);
                             i++;
                         }
                     }
-                    if (i < length && s.charAt(i) == '"') {
-                        i++;
-                    }
-                    String strVal = sb.toString();
-                    tokens.add(new Token(TokenKind.STRING, strVal));
-                    continue;
+                    tokens.add(new Token(TokenKind.STRING, sb.toString()));
+                    break;
+                }
                 default:
-
                     if (Character.isLetter(c) || c == '-' || Character.isDigit(c)) {
                         int start = i;
-                        while (i < length && (Character.isLetterOrDigit(s.charAt(i))
-                                || s.charAt(i) == '-' || s.charAt(i) == '+' || s.charAt(i) == '.')) {
-                            i++;
+                        while (i < length) {
+                            char ch = s.charAt(i);
+                            if (Character.isLetterOrDigit(ch) || ch == '-' || ch == '+' || ch == '.') {
+                                i++;
+                            } else {
+                                break;
+                            }
                         }
                         String rawVal = s.substring(start, i);
-                        Token token = _correctLiteral(rawVal);
-                        tokens.add(token);
-                        continue;
+                        tokens.add(correctLiteral(rawVal));
                     } else {
-
                         i++;
-                        continue;
                     }
+                    break;
             }
         }
         tokens.add(new Token(TokenKind.EOF, null));
         return tokens;
     }
 
-    private Token _correctLiteral(String raw) {
-        String lower = raw.toLowerCase();
-        if (lower.equals("t") || lower.equals("tr") || lower.equals("tru") || lower.equals("true")) {
-            return new Token(TokenKind.TRUE, "true");
+    private Token correctLiteral(String raw) {
+        int len = raw.length();
+
+        if (len <= 5) {
+            char first = raw.charAt(0);
+            switch (Character.toLowerCase(first)) {
+                case 't':
+                    if (matchLiteral(raw, "true")) {
+                        return Token.TRUE;
+                    }
+                    break;
+                case 'f':
+                    if (matchLiteral(raw, "false")) {
+                        return Token.FALSE;
+                    }
+                    break;
+                case 'n':
+                    if (matchLiteral(raw, "null")) {
+                        return Token.NULL;
+                    }
+                    break;
+            }
         }
-        if (lower.equals("f") || lower.equals("fa") || lower.equals("fal") || lower.equals("fals") || lower.equals("false")) {
-            return new Token(TokenKind.FALSE, "false");
-        }
-        if (lower.equals("n") || lower.equals("nu") || lower.equals("nul") || lower.equals("null")) {
-            return new Token(TokenKind.NULL, "null");
-        }
-        Pattern numPattern = Pattern.compile("^-?\\d+(\\.\\d+)?$");
-        Matcher m = numPattern.matcher(raw);
+        Matcher m = NUM_PATTERN.matcher(raw);
         if (m.matches()) {
             return new Token(TokenKind.NUMBER, raw);
         }
-        Pattern idPattern = Pattern.compile("^[A-Za-z_]\\w*$");
-        m = idPattern.matcher(raw);
+        m = ID_PATTERN.matcher(raw);
         if (m.matches()) {
             return new Token(TokenKind.STRING, raw);
         }
         return new Token(TokenKind.UNKNOWN, raw);
+    }
+
+    private boolean matchLiteral(String raw, String full) {
+
+        int len = raw.length();
+        if (len > full.length()) return false;
+        for (int i = 0; i < len; i++) {
+            if (Character.toLowerCase(raw.charAt(i)) != full.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

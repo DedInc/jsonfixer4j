@@ -5,11 +5,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-class JSONParser {
+public final class JSONParser {
 
-    static class ParseResult {
-        Object value;
-        int index;
+    public static class ParseResult {
+        public final Object value;
+        public final int index;
 
         public ParseResult(Object value, int index) {
             this.value = value;
@@ -24,14 +24,15 @@ class JSONParser {
         Token token = tokenList.get(idx);
         switch (token.kind) {
             case LBRACE:
-                return _parseObject(tokenList, idx + 1);
+                return parseObject(tokenList, idx + 1);
             case LBRACKET:
-                return _parseArray(tokenList, idx + 1);
+                return parseArray(tokenList, idx + 1);
             case STRING:
                 return new ParseResult(token.value, idx + 1);
             case NUMBER:
                 try {
-                    if (token.value.contains(".")) {
+
+                    if (token.value.indexOf('.') != -1) {
                         return new ParseResult(Double.parseDouble(token.value), idx + 1);
                     } else {
                         return new ParseResult(Integer.parseInt(token.value), idx + 1);
@@ -54,19 +55,14 @@ class JSONParser {
         }
     }
 
-    private ParseResult _parseObject(List<Token> tokenList, int idx) {
+    private ParseResult parseObject(List<Token> tokenList, int idx) {
         Map<String, Object> result = new LinkedHashMap<>();
         boolean expectComma = false;
-        while (true) {
-            if (idx >= tokenList.size()) {
-                return new ParseResult(result, idx);
-            }
+        final int size = tokenList.size();
+        while (idx < size) {
             Token token = tokenList.get(idx);
-            if (token.kind == TokenKind.RBRACE) {
+            if (token.kind == TokenKind.RBRACE || token.kind == TokenKind.EOF) {
                 return new ParseResult(result, idx + 1);
-            }
-            if (token.kind == TokenKind.EOF) {
-                return new ParseResult(result, idx);
             }
             if (expectComma) {
                 if (token.kind == TokenKind.COMMA) {
@@ -81,36 +77,30 @@ class JSONParser {
             if (token.kind == TokenKind.STRING) {
                 String key = token.value;
                 idx++;
-                if (idx < tokenList.size() && tokenList.get(idx).kind == TokenKind.COLON) {
+                if (idx < size && tokenList.get(idx).kind == TokenKind.COLON) {
                     idx++;
                     ParseResult pr = parse(tokenList, idx);
                     result.put(key, pr.value);
                     idx = pr.index;
                     expectComma = true;
                 } else {
-
                     idx++;
-                    continue;
                 }
             } else {
                 idx++;
             }
         }
+        return new ParseResult(result, idx);
     }
 
-    private ParseResult _parseArray(List<Token> tokenList, int idx) {
+    private ParseResult parseArray(List<Token> tokenList, int idx) {
         List<Object> result = new ArrayList<>();
         boolean expectComma = false;
-        while (true) {
-            if (idx >= tokenList.size()) {
-                return new ParseResult(result, idx);
-            }
+        final int size = tokenList.size();
+        while (idx < size) {
             Token token = tokenList.get(idx);
-            if (token.kind == TokenKind.RBRACKET) {
+            if (token.kind == TokenKind.RBRACKET || token.kind == TokenKind.EOF) {
                 return new ParseResult(result, idx + 1);
-            }
-            if (token.kind == TokenKind.EOF) {
-                return new ParseResult(result, idx);
             }
             if (expectComma) {
                 if (token.kind == TokenKind.COMMA) {
@@ -124,11 +114,10 @@ class JSONParser {
                     continue;
                 }
             }
-
-            if (!(token.kind == TokenKind.LBRACE || token.kind == TokenKind.LBRACKET ||
-                    token.kind == TokenKind.STRING || token.kind == TokenKind.NUMBER ||
-                    token.kind == TokenKind.TRUE || token.kind == TokenKind.FALSE ||
-                    token.kind == TokenKind.NULL)) {
+            if (token.kind != TokenKind.LBRACE && token.kind != TokenKind.LBRACKET &&
+                    token.kind != TokenKind.STRING && token.kind != TokenKind.NUMBER &&
+                    token.kind != TokenKind.TRUE && token.kind != TokenKind.FALSE &&
+                    token.kind != TokenKind.NULL) {
                 return new ParseResult(result, idx);
             }
             ParseResult pr = parse(tokenList, idx);
@@ -136,5 +125,6 @@ class JSONParser {
             idx = pr.index;
             expectComma = true;
         }
+        return new ParseResult(result, idx);
     }
 }
