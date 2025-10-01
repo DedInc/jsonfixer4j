@@ -1,9 +1,9 @@
 [package]
 name = "jsonfixer_rust"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["DedInc"]
-description = "A Rust implementation of jsonfixer4j with JNI bindings"
+description = "A Rust implementation of jsonfixer4j with JNI bindings - High-performance JSON auto-correction"
 license = "MIT"
 
 [lib]
